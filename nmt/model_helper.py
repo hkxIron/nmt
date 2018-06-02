@@ -320,7 +320,7 @@ def create_emb_for_encoder_and_decoder(share_vocab,
   with tf.variable_scope(
       scope or "embeddings", dtype=dtype, partitioner=partitioner) as scope:
     # Share embedding
-    if share_vocab:
+    if share_vocab: # 大多情况下,并不会share
       if src_vocab_size != tgt_vocab_size:
         raise ValueError("Share embedding but different src/tgt vocab sizes"
                          " %d vs. %d" % (src_vocab_size, tgt_vocab_size))

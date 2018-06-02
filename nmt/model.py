@@ -564,12 +564,15 @@ class Model(BaseModel):
 
     with tf.variable_scope("encoder") as scope:
       dtype = scope.dtype
-      # Look up embedding, emp_inp: [max_time, batch_size, num_units]
+      # Look up embedding
+      # embedding_encoder: [src_vocab_size, embedding_size]
+      # source: [max_time, batch_size]
+      # encoder_emp_inp: [max_time, batch_size, num_units]
       encoder_emb_inp = tf.nn.embedding_lookup(
           self.embedding_encoder, source)
 
       # Encoder_outputs: [max_time, batch_size, num_units]
-      if hparams.encoder_type == "uni":
+      if hparams.encoder_type == "uni": # 单向
         utils.print_out("  num_layers = %d, num_residual_layers=%d" %
                         (num_layers, num_residual_layers))
         cell = self._build_encoder_cell(
@@ -582,7 +585,7 @@ class Model(BaseModel):
             sequence_length=iterator.source_sequence_length,
             time_major=self.time_major,
             swap_memory=True)
-      elif hparams.encoder_type == "bi":
+      elif hparams.encoder_type == "bi": #双向
         num_bi_layers = int(num_layers / 2)
         num_bi_residual_layers = int(num_residual_layers / 2)
         utils.print_out("  num_bi_layers = %d, num_bi_residual_layers=%d" %
