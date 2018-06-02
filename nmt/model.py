@@ -61,7 +61,7 @@ class BaseModel(object):
 
     """
     assert isinstance(iterator, iterator_utils.BatchedInput)
-    self.iterator = iterator
+    self.iterator = iterator # database iterator
     self.mode = mode
     self.src_vocab_table = source_vocab_table
     self.tgt_vocab_table = target_vocab_table
@@ -251,7 +251,9 @@ class BaseModel(object):
             tgt_vocab_file=hparams.tgt_vocab_file,
             src_embed_file=hparams.src_embed_file,
             tgt_embed_file=hparams.tgt_embed_file,
-            scope=scope,))
+            scope=scope,
+        )
+    )
 
   def train(self, sess):
     assert self.mode == tf.contrib.learn.ModeKeys.TRAIN

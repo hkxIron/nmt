@@ -30,7 +30,8 @@ class BatchedInput(
                             "target_sequence_length"))):
   pass
 
-
+# src_vocab_table: 源数据单词查找表，就是个单词和int类型数据的对应表
+# tgt_vocab_table: 目标数据单词查找表，就是个单词和int类型数据的对应表
 def get_infer_iterator(src_dataset,
                        src_vocab_table,
                        batch_size,

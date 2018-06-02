@@ -289,6 +289,7 @@ def add_arguments(parser):
 
 def create_hparams(flags):
   """Create training hparams."""
+  # 此处是在定义超参数
   return tf.contrib.training.HParams(
       # Data
       src=flags.src,
@@ -590,7 +591,6 @@ def run_main(flags, default_hparams, train_fn, inference_fn, target_session=""):
     # Train
     train_fn(hparams, target_session=target_session)
 
-
 def main(unused_argv):
   default_hparams = create_hparams(FLAGS)
   train_fn = train.train
@@ -601,5 +601,5 @@ def main(unused_argv):
 if __name__ == "__main__":
   nmt_parser = argparse.ArgumentParser()
   add_arguments(nmt_parser)
-  FLAGS, unparsed = nmt_parser.parse_known_args()
+  FLAGS, unparsed = nmt_parser.parse_known_args() # 前面是解析的namespace,后面是未解析的参数
   tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)

@@ -74,6 +74,7 @@ def print_out(s, f=None, new_line=True):
 def print_hparams(hparams, skip_patterns=None, header=None):
   """Print hparams, can skip keys based on pattern."""
   if header: print_out("%s" % header)
+  # hparams: 本质是dict
   values = hparams.values()
   for key in sorted(values.keys()):
     if not skip_patterns or all(
