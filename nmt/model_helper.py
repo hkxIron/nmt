@@ -15,7 +15,7 @@ from .utils import iterator_utils
 from .utils import misc_utils as utils
 from .utils import vocab_utils
 
-
+# __all__ 显式表明该类中哪些方法可以导出
 __all__ = [
     "get_initializer", "get_device_str", "create_train_model",
     "create_eval_model", "create_infer_model",
@@ -402,8 +402,8 @@ def _cell_list(unit_type, num_units, num_layers, num_residual_layers,
                forget_bias, dropout, mode, num_gpus, base_gpu=0,
                single_cell_fn=None, residual_fn=None):
   """Create a list of RNN cells."""
-  if not single_cell_fn:
-    single_cell_fn = _single_cell
+  if not single_cell_fn: # 如果single_cell_fn为空, 使用默认的single_cell_fn
+    single_cell_fn = _single_cell # 创建一个lstm或者gru的层
 
   # Multi-GPU
   cell_list = []
@@ -463,8 +463,8 @@ def create_rnn_cell(unit_type, num_units, num_layers, num_residual_layers,
                          single_cell_fn=single_cell_fn)
 
   if len(cell_list) == 1:  # Single layer.
-    return cell_list[0]
-  else:  # Multi layers
+    return cell_list[0] # 如果是单层的话, 只取第一个cell
+  else:  # Multi layers, 多层RNN,但并未看到个cell_list之间产生联系
     return tf.contrib.rnn.MultiRNNCell(cell_list)
 
 

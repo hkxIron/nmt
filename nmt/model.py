@@ -577,7 +577,7 @@ class Model(BaseModel):
                         (num_layers, num_residual_layers))
         cell = self._build_encoder_cell(
             hparams, num_layers, num_residual_layers)
-
+        # hidden_state , cell_state
         encoder_outputs, encoder_state = tf.nn.dynamic_rnn(
             cell,
             encoder_emb_inp,
@@ -585,7 +585,7 @@ class Model(BaseModel):
             sequence_length=iterator.source_sequence_length,
             time_major=self.time_major,
             swap_memory=True)
-      elif hparams.encoder_type == "bi": #双向
+      elif hparams.encoder_type == "bi": # 双向
         num_bi_layers = int(num_layers / 2)
         num_bi_residual_layers = int(num_residual_layers / 2)
         utils.print_out("  num_bi_layers = %d, num_bi_residual_layers=%d" %
@@ -605,7 +605,7 @@ class Model(BaseModel):
         else:
           # alternatively concat forward and backward states
           encoder_state = []
-          for layer_id in range(num_bi_layers):
+          for layer_id in range(num_bi_layers): # 将每一层的前向hidden vector与后向hidden vector拼接起来
             encoder_state.append(bi_encoder_state[0][layer_id])  # forward
             encoder_state.append(bi_encoder_state[1][layer_id])  # backward
           encoder_state = tuple(encoder_state)
