@@ -217,7 +217,7 @@ def create_infer_model(model_creator, hparams, scope=None, extra_args=None):
 
 def _get_embed_device(vocab_size):
   """Decide on which device to place an embed matrix given its vocab size."""
-  if vocab_size > VOCAB_SIZE_THRESHOLD_CPU:
+  if vocab_size > VOCAB_SIZE_THRESHOLD_CPU: # 如果vocab_size > 50000, 那么就改成在cpu上分配参数空间
     return "/cpu:0"
   else:
     return "/gpu:0"
@@ -234,7 +234,7 @@ def _create_pretrained_emb_from_txt(
       variables. Default is 3, which is "<unk>", "<s>" and "</s>".
   """
   vocab, _ = vocab_utils.load_vocab(vocab_file)
-  trainable_tokens = vocab[:num_trainable_tokens]
+  trainable_tokens = vocab[:num_trainable_tokens] # 为何其它的都是不可训练的呢?
 
   utils.print_out("# Using pretrained embedding: %s." % embed_file)
   utils.print_out("  with trainable tokens: ")
@@ -248,12 +248,13 @@ def _create_pretrained_emb_from_txt(
   emb_mat = np.array(
       [emb_dict[token] for token in vocab], dtype=dtype.as_numpy_dtype())
   emb_mat = tf.constant(emb_mat)
-  emb_mat_const = tf.slice(emb_mat, [num_trainable_tokens, 0], [-1, -1])
+  #除了这3个词以外,其它的词的embedding均不参与训练
+  emb_mat_const = tf.slice(emb_mat, begin=[num_trainable_tokens, 0], size=[-1, -1])
   with tf.variable_scope(scope or "pretrain_embeddings", dtype=dtype) as scope:
     with tf.device(_get_embed_device(num_trainable_tokens)):
-      emb_mat_var = tf.get_variable(
+      emb_mat_var = tf.get_variable( # 只有这3个词的embedding可以生成变量
           "emb_mat_var", [num_trainable_tokens, emb_size])
-  return tf.concat([emb_mat_var, emb_mat_const], 0)
+  return tf.concat([emb_mat_var, emb_mat_const], 0) # 将常量与变量concat
 
 
 def _create_or_load_embed(embed_name, vocab_file, embed_file,
@@ -263,7 +264,7 @@ def _create_or_load_embed(embed_name, vocab_file, embed_file,
     embedding = _create_pretrained_emb_from_txt(vocab_file, embed_file)
   else:
     with tf.device(_get_embed_device(vocab_size)):
-      embedding = tf.get_variable(
+      embedding = tf.get_variable( # 一般都是用get_variable
           embed_name, [vocab_size, embed_size], dtype)
   return embedding
 

@@ -33,7 +33,6 @@ SOS = "<s>"
 EOS = "</s>"
 UNK_ID = 0
 
-
 def load_vocab(vocab_file):
   vocab = []
   with codecs.getreader("utf-8")(tf.gfile.GFile(vocab_file, "rb")) as f:
