@@ -15,6 +15,7 @@ from .utils import iterator_utils
 from .utils import misc_utils as utils
 from .utils import vocab_utils
 
+# add some comment
 # __all__ 显式表明该类中哪些方法可以导出
 __all__ = [
     "get_initializer", "get_device_str", "create_train_model",
