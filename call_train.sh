@@ -1,5 +1,5 @@
 #!/bin/bash
-common_path="/home/hkx/work/data/nmt"
+common_path="data/nmt"
 model_path="$common_path/nmt_model"
 data_path="$common_path/nmt_data"
 [[ ! -d "$model_path" ]]&&{ mkdir -p $model_path; }
@@ -11,7 +11,7 @@ fi
 
 <<EOF
 EOF
-source activate python36
+#source activate python36
 set -x
 python -m nmt.nmt \
     --src=vi --tgt=en \

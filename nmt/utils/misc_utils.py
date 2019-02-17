@@ -52,7 +52,7 @@ def print_time(s, start_time):
 
 def print_out(s, f=None, new_line=True):
   """Similar to print but with support to flush and output to a file."""
-  if isinstance(s, bytes):
+  if isinstance(s, bytes): # 如果是byte码,需要解码成str
     s = s.decode("utf-8")
 
   if f:

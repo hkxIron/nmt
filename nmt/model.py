@@ -100,6 +100,10 @@ class BaseModel(object):
     self.batch_size = tf.size(self.iterator.source_sequence_length)
 
     # Projection
+    """
+    Lastly, we haven't mentioned projection_layer which is a dense matrix to turn 
+    the top hidden states to logit vectors of dimension V
+    """
     with tf.variable_scope(scope or "build_network"):
       with tf.variable_scope("decoder/output_projection"):
         self.output_layer = layers_core.Dense(
@@ -394,6 +398,10 @@ class BaseModel(object):
         decoder_emb_inp = tf.nn.embedding_lookup(
             self.embedding_decoder, target_input)
 
+        """
+        By separating out decoders and helpers, we can reuse different codebases, 
+        e.g., TrainingHelper can be substituted with GreedyEmbeddingHelper to do greedy decoding.
+        """
         # Helper
         helper = tf.contrib.seq2seq.TrainingHelper(
             decoder_emb_inp, iterator.target_sequence_length,
@@ -448,6 +456,12 @@ class BaseModel(object):
                 softmax_temperature=sampling_temperature,
                 seed=hparams.random_seed)
           else:
+            """
+            Here, we use GreedyEmbeddingHelper instead of TrainingHelper. 
+            Since we do not know the target sequence lengths in advance, 
+            we use maximum_iterations to limit the translation lengths. 
+            One heuristic is to decode up to two times the source sentence lengths.
+            """
             helper = tf.contrib.seq2seq.GreedyEmbeddingHelper(
                 self.embedding_decoder, start_tokens, end_token)
 
@@ -503,8 +517,14 @@ class BaseModel(object):
     if self.time_major:
       target_output = tf.transpose(target_output)
     max_time = self.get_max_time(target_output)
-    crossent = tf.nn.sparse_softmax_cross_entropy_with_logits(
-        labels=target_output, logits=logits)
+    """
+    Here, target_weights is a zero-one matrix of the same size as decoder_outputs. 
+    It masks padding positions outside of the target sequence lengths with values 0.
+    
+    Important note: It's worth pointing out that we divide the loss by batch_size, so our hyperparameters are "invariant" to batch_size. Some people divide the loss by (batch_size * num_time_steps), which plays down the errors made on short sentences. More subtly, our hyperparameters (applied to the former way) can't be used for the latter way. 
+    For example, if both approaches use SGD with a learning of 1.0, the latter approach effectively uses a much smaller learning rate of 1 / num_time_steps.
+    """
+    crossent = tf.nn.sparse_softmax_cross_entropy_with_logits( labels=target_output, logits=logits)
     target_weights = tf.sequence_mask(
         self.iterator.target_sequence_length, max_time, dtype=logits.dtype)
     if self.time_major:
@@ -559,17 +579,16 @@ class Model(BaseModel):
     iterator = self.iterator
 
     source = iterator.source
-    if self.time_major:
-      source = tf.transpose(source)
+    if self.time_major: # 是否时间优先
+      source = tf.transpose(a=source) # source:[batch, max_time] -> [max_time, batch]
 
     with tf.variable_scope("encoder") as scope:
       dtype = scope.dtype
       # Look up embedding
       # embedding_encoder: [src_vocab_size, embedding_size]
       # source: [max_time, batch_size]
-      # encoder_emp_inp: [max_time, batch_size, num_units]
-      encoder_emb_inp = tf.nn.embedding_lookup(
-          self.embedding_encoder, source)
+      # encoder_emp_inp: [max_time, batch_size, embedding_size]
+      encoder_emb_inp = tf.nn.embedding_lookup(params=self.embedding_encoder, ids=source)
 
       # Encoder_outputs: [max_time, batch_size, num_units]
       if hparams.encoder_type == "uni": # 单向
