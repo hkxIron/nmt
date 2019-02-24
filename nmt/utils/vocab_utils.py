@@ -27,7 +27,7 @@ from tensorflow.python.ops import lookup_ops
 
 from ..utils import misc_utils as utils
 
-
+# 好像没有区分padding与unk
 UNK = "<unk>"
 SOS = "<s>"
 EOS = "</s>"
@@ -36,6 +36,7 @@ UNK_ID = 0
 def load_vocab(vocab_file):
   vocab = []
   with codecs.getreader("utf-8")(tf.gfile.GFile(vocab_file, "rb")) as f:
+    # 注意:此处是加载vocab_file,因此,理论上文件中的内容不会重复
     vocab_size = 0
     for word in f:
       vocab_size += 1
@@ -77,8 +78,9 @@ def check_vocab(vocab_file, out_dir, check_special_token=True, sos=None,
 
 def create_vocab_tables(src_vocab_file, tgt_vocab_file, share_vocab):
   """Creates vocab tables for src_vocab_file and tgt_vocab_file."""
+  # Map(word -> id)
   src_vocab_table = lookup_ops.index_table_from_file(
-      src_vocab_file, default_value=UNK_ID)
+      vocabulary_file=src_vocab_file, default_value=UNK_ID)
   if share_vocab:
     tgt_vocab_table = src_vocab_table
   else:
@@ -104,7 +106,7 @@ def load_embed_txt(embed_file):
   """
   emb_dict = dict()
   emb_size = None
-  with codecs.getreader("utf-8")(tf.gfile.GFile(embed_file, 'rb')) as f:
+  with codecs.getreader("utf-8")(tf.gfile.GFile(embed_file, 'rb')) as f: # 注意:为二进制的文件
     for line in f:
       tokens = line.strip().split(" ")
       word = tokens[0]

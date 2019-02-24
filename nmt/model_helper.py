@@ -50,8 +50,8 @@ def get_device_str(device_id, num_gpus):
   return device_str_output
 
 
-class ExtraArgs(collections.namedtuple(
-    "ExtraArgs", ("single_cell_fn", "model_device_fn",
+class ExtraArgs(
+    collections.namedtuple("ExtraArgs", ("single_cell_fn", "model_device_fn",
                   "attention_mechanism_fn"))):
   pass
 
@@ -62,8 +62,7 @@ class TrainModel(
   pass
 
 
-def create_train_model(
-    model_creator, hparams, scope=None, num_workers=1, jobid=0,
+def create_train_model(model_creator, hparams, scope=None, num_workers=1, jobid=0,
     extra_args=None):
   """Create train graph, model, and iterator."""
   src_file = "%s.%s" % (hparams.train_prefix, hparams.src)
@@ -77,9 +76,9 @@ def create_train_model(
     src_vocab_table, tgt_vocab_table = vocab_utils.create_vocab_tables(
         src_vocab_file, tgt_vocab_file, hparams.share_vocab)
 
-    src_dataset = tf.data.TextLineDataset(src_file)
-    tgt_dataset = tf.data.TextLineDataset(tgt_file)
-    skip_count_placeholder = tf.placeholder(shape=(), dtype=tf.int64)
+    src_dataset = tf.data.TextLineDataset(filenames=src_file)
+    tgt_dataset = tf.data.TextLineDataset(filenames=tgt_file)
+    skip_count_placeholder = tf.placeholder(shape=(), dtype=tf.int64) # scalar没有shape
 
     iterator = iterator_utils.get_iterator(
         src_dataset,
@@ -100,7 +99,8 @@ def create_train_model(
     # Note: One can set model_device_fn to
     # `tf.train.replica_device_setter(ps_tasks)` for distributed training.
     model_device_fn = None
-    if extra_args: model_device_fn = extra_args.model_device_fn
+    if extra_args:
+        model_device_fn = extra_args.model_device_fn
     with tf.device(model_device_fn):
       model = model_creator(
           hparams,
@@ -478,6 +478,7 @@ def gradient_clip(gradients, max_gradient_norm):
 
 
 def load_model(model, ckpt, session, name):
+  # 注意:如果是load_model,就没有tf.global_variables_initializer()
   start_time = time.time()
   model.saver.restore(session, ckpt)
   session.run(tf.tables_initializer())

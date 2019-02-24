@@ -55,9 +55,11 @@ class GNMTModel(attention_model.AttentionModel):
 
   def _build_encoder(self, hparams):
     """Build a GNMT encoder."""
+    # 如果是uni或者 bi-direction,直接调用基类方法
     if hparams.encoder_type == "uni" or hparams.encoder_type == "bi":
       return super(GNMTModel, self)._build_encoder(hparams)
 
+    # 注意,对于gnmt,encoder部分也要重写
     if hparams.encoder_type != "gnmt":
       raise ValueError("Unknown encoder_type %s" % hparams.encoder_type)
 
@@ -81,6 +83,21 @@ class GNMTModel(attention_model.AttentionModel):
                                                source)
 
       # Execute _build_bidirectional_rnn from Model class
+      # 调用基类的双向rnn
+      """
+      bi_outputs: [batch, input_sequence_length, 2*num_units]
+     
+      (output_fw, output_bw), (states_fw, states_bw) = tf.nn.bidirectional_dynamic_rnn
+    
+       output_fw: [batch, input_sequence_length, num_units],它的值为hidden_state
+       output_bw: [batch, input_sequence_length, num_units],它的值为hidden_state
+        
+       (cell_state_fw, hidden_state_fw) = states_fw
+       cell_state: [batch, num_units]
+       hidden_state: [batch, num_units]
+       states_fw: (LSTMTuple(cell_state_fw, hidden_state_fw),LSTMTuple(cell_state_fw, hidden_state_fw), ... ),
+       rnn有n层,state_fw 的tuple的长度就会为n 
+      """
       bi_encoder_outputs, bi_encoder_state = self._build_bidirectional_rnn(
           inputs=encoder_emb_inp,
           sequence_length=iterator.source_sequence_length,
@@ -90,7 +107,7 @@ class GNMTModel(attention_model.AttentionModel):
           num_bi_residual_layers=0,  # no residual connection
       )
 
-      uni_cell = model_helper.create_rnn_cell(
+      uni_encoder_cell = model_helper.create_rnn_cell(
           unit_type=hparams.unit_type,
           num_units=hparams.num_units,
           num_layers=num_uni_layers,
@@ -104,9 +121,20 @@ class GNMTModel(attention_model.AttentionModel):
 
       # encoder_outputs: size [max_time, batch_size, num_units]
       #   when time_major = True
+      """
+      encoder_output:[batch, source_sequence_length, hidden_size]
+      encoder_state:[hidden=[batch, hidden_size], cell=[batch, hidden_size]]
+      
+      注意:gnmt与其它模型不同之处
+      
+      gnmt中:
+      1.将input_embedding输入多层bi-lstm中, 得到bi_encoder_outputs
+      2.将bi_encoder_outputs输入到encoder中(普通的模型直接将input_embedding输入encoder)
+      3.将bi-lstm的第1层以及所有的encoder state作为全部的state
+      """
       encoder_outputs, encoder_state = tf.nn.dynamic_rnn(
-          uni_cell,
-          bi_encoder_outputs,
+          cell=uni_encoder_cell,
+          inputs=bi_encoder_outputs,
           dtype=dtype,
           sequence_length=iterator.source_sequence_length,
           time_major=self.time_major)
@@ -118,6 +146,7 @@ class GNMTModel(attention_model.AttentionModel):
 
     return encoder_outputs, encoder_state
 
+  # overwrite base method
   def _build_decoder_cell(self, hparams, encoder_outputs, encoder_state,
                           source_sequence_length):
     """Build a RNN cell with GNMT attention architecture."""
@@ -167,25 +196,32 @@ class GNMTModel(attention_model.AttentionModel):
     )
 
     # Only wrap the bottom layer with the attention mechanism.
-    attention_cell = cell_list.pop(0)
+    """
+    The GNMT attention architecture parallelizes the decoder's 
+    computation by using the bottom (first) layer’s output to query attention. 
+    Therefore, each decoding step can start as soon as its previous step's first 
+    layer and attention computation finished. We implemented the architecture in GNMTAttentionMultiCell,
+    a subclass of tf.contrib.rnn.MultiRNNCell. 
+    Here’s an example of how to create a decoder cell with the GNMTAttentionMultiCell.
+    """
+    # 将第一层的cell拿出来
+    first_decoder_cell = cell_list.pop(0)
 
     # Only generate alignment in greedy INFER mode.
     alignment_history = (self.mode == tf.contrib.learn.ModeKeys.INFER and
                          beam_width == 0)
     attention_cell = tf.contrib.seq2seq.AttentionWrapper(
-        attention_cell,
-        attention_mechanism,
+        cell=first_decoder_cell, # 只将第一层拿出来做attention
+        attention_mechanism=attention_mechanism,
         attention_layer_size=None,  # don't use attention layer.
         output_attention=False,
         alignment_history=alignment_history,
         name="attention")
 
     if attention_architecture == "gnmt":
-      cell = GNMTAttentionMultiCell(
-          attention_cell, cell_list)
+      cell = GNMTAttentionMultiCell(attention_cell, cell_list)
     elif attention_architecture == "gnmt_v2":
-      cell = GNMTAttentionMultiCell(
-          attention_cell, cell_list, use_new_attention=True)
+      cell = GNMTAttentionMultiCell(attention_cell, cell_list, use_new_attention=True)
     else:
       raise ValueError(
           "Unknown attention_architecture %s" % attention_architecture)
@@ -252,10 +288,11 @@ class GNMTAttentionMultiCell(tf.nn.rnn_cell.MultiRNNCell):
           cur_state = state[i]
 
           if self.use_new_attention:
-            cur_inp = tf.concat([cur_inp, new_attention_state.attention], -1)
+            cur_inp = tf.concat([cur_inp, new_attention_state.attention], axis=-1)
           else:
-            cur_inp = tf.concat([cur_inp, attention_state.attention], -1)
+            cur_inp = tf.concat([cur_inp, attention_state.attention], axis=-1)
 
+          # a_t = f(h_t, C_t)
           cur_inp, new_state = cell(cur_inp, cur_state)
           new_states.append(new_state)
 

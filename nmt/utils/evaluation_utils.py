@@ -30,11 +30,11 @@ __all__ = ["evaluate"]
 
 def evaluate(ref_file, trans_file, metric, subword_option=None):
   """Pick a metric and evaluate depending on task."""
-  # BLEU scores for translation task
+  # BLEU scores for translation task, 翻译任务
   if metric.lower() == "bleu":
     evaluation_score = _bleu(ref_file, trans_file,
                              subword_option=subword_option)
-  # ROUGE scores for summarization tasks
+  # ROUGE scores for summarization tasks, 摘要任务
   elif metric.lower() == "rouge":
     evaluation_score = _rouge(ref_file, trans_file,
                               subword_option=subword_option)

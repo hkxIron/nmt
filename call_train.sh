@@ -11,7 +11,7 @@ fi
 
 <<EOF
 EOF
-#source activate python36
+# source activate python36
 set -x
 python -m nmt.nmt \
     --src=vi --tgt=en \

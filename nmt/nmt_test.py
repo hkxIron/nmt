@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
 # Copyright 2017 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,14 +17,11 @@
 # ==============================================================================
 """Tests for nmt.py, train.py and inference.py."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 import argparse
 import os
-
 import tensorflow as tf
+
 
 from . import inference
 from . import nmt

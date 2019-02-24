@@ -46,10 +46,15 @@ def run_sample_decode(infer_model, infer_sess, model_dir, hparams,
     loaded_infer_model, global_step = model_helper.create_or_load_model(
         infer_model.model, model_dir, infer_sess, "infer")
 
-  _sample_decode(loaded_infer_model, global_step, infer_sess, hparams,
-                 infer_model.iterator, src_data, tgt_data,
+  _sample_decode(loaded_infer_model,
+                 global_step,
+                 infer_sess,
+                 hparams,
+                 infer_model.iterator,
+                 src_data, tgt_data,
                  infer_model.src_placeholder,
-                 infer_model.batch_size_placeholder, summary_writer)
+                 infer_model.batch_size_placeholder,
+                 summary_writer)
 
 
 def run_internal_eval(
@@ -198,8 +203,11 @@ def run_full_eval(model_dir, infer_model, infer_sess, eval_model, eval_sess,
 
 def init_stats():
   """Initialize statistics that we want to accumulate."""
-  return {"step_time": 0.0, "loss": 0.0, "predict_count": 0.0,
-          "total_count": 0.0, "grad_norm": 0.0}
+  return {"step_time": 0.0,
+          "loss": 0.0,
+          "predict_count": 0.0,
+          "total_count": 0.0,
+          "grad_norm": 0.0}
 
 
 def update_stats(stats, start_time, step_result):
@@ -250,10 +258,12 @@ def before_train(loaded_train_model, train_model, train_sess, global_step,
                  hparams, log_f):
   """Misc tasks to do before training."""
   stats = init_stats()
-  info = {"train_ppl": 0.0, "speed": 0.0, "avg_step_time": 0.0,
+  info = {"train_ppl": 0.0,
+          "speed": 0.0,
+          "avg_step_time": 0.0,
           "avg_grad_norm": 0.0,
-          "learning_rate": loaded_train_model.learning_rate.eval(
-              session=train_sess)}
+          "learning_rate": loaded_train_model.learning_rate.eval(session=train_sess)
+          }
   start_train_time = time.time()
   utils.print_out("# Start step %d, lr %g, %s" %
                   (global_step, info["learning_rate"], time.ctime()), log_f)
@@ -416,9 +426,15 @@ def train(hparams, scope=None, target_session=""):
           train_sess,
           os.path.join(out_dir, "translate.ckpt"),
           global_step=global_step)
-      run_sample_decode(infer_model, infer_sess,
-                        model_dir, hparams, summary_writer, sample_src_data,
+
+      run_sample_decode(infer_model,
+                        infer_sess,
+                        model_dir,
+                        hparams,
+                        summary_writer,
+                        sample_src_data,
                         sample_tgt_data)
+
       run_external_eval(
           infer_model, infer_sess, model_dir,
           hparams, summary_writer)
@@ -515,12 +531,13 @@ def _sample_decode(model, global_step, sess, hparams, iterator, src_data,
   nmt_outputs, attention_summary = model.decode(sess)
 
   if hparams.beam_width > 0:
-    # get the top translation.
+    # nmt_outputs:[beam_width, batch, time]
+    # get the top translation.只选取 beamsearch中概率最大的那个
     nmt_outputs = nmt_outputs[0]
 
   translation = nmt_utils.get_translation(
-      nmt_outputs,
-      sent_id=0,
+      nmt_outputs=nmt_outputs,
+      sent_id=0, # 只选取batch中的第0个元素
       tgt_eos=hparams.eos,
       subword_option=hparams.subword_option)
   utils.print_out("    src: %s" % src_data[decode_id])
@@ -571,7 +588,7 @@ def _external_eval(model, global_step, sess, hparams, iterator,
                         scores[metric])
       # metric: larger is better
       if save_on_best and scores[metric] > getattr(hparams, best_metric_label):
-        setattr(hparams, best_metric_label, scores[metric])
+        setattr(hparams, best_metric_label, scores[metric]) # 高级用法
         model.saver.save(
             sess,
             os.path.join(
